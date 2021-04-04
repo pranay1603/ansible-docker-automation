@@ -1,0 +1,57 @@
+- name: "installing docker nd exposing it to the public world "
+  hosts: docker
+  vars_prompt:
+          - name: ports
+            prompt: "\nenter the port to expose to the public "
+            private: no
+          - name: directory
+            prompt: "\nenter the path of the directory name of your webpage "
+            private: no
+  gather_facts: no  
+  tasks:
+
+  - name: "creating docker repository"
+    yum_repository:
+      name: "docker"
+      description: "Docker"
+      baseurl: "https://download.docker.com/linux/centos/7/x86_64/stable/"
+      gpgcheck: no
+      enabled: yes
+
+  - name: "installing docker"
+    shell: "dnf install docker-ce --nobest -y"
+   
+
+  - name: "installing python"
+    package:
+      name: "python3-pip" 
+      state: present 
+
+  - name: "installing docker sdk"
+    pip:
+      name: "docker" 
+
+  - name: "starting the service of docker"
+    service:
+      name: "docker"
+      state: started 
+
+  - name: "copying webpage"
+    copy:
+     src: "{{ directory }}"
+     dest: "/"    
+
+  - name: "starting httpd container"
+    docker_container:
+      name: "mycontainer"
+      image: "httpd"
+      ports:
+         "{{ ports }}:80"      
+      volumes: 
+       - /webpage:/usr/local/apache2/htdocs/ 
+
+  - firewalld:
+          port: "8080/tcp"
+          permanent: yes
+          immediate: yes
+          state: enabled
